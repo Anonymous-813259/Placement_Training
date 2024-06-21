@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Animation</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        .node {
+            fill: lightblue;
+            stroke: steelblue;
+            stroke-width: 1.5px;
+        }
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 1.5px;
+        }
+    </style>
+</head>
+<body>
+    <svg width="960" height="600"></svg>
+    <script>
+        const data = {
+            name: "Root",
+            children: [
+                { name: "Child 1" },
+                { name: "Child 2" },
+                { name: "Child 3" }
+            ]
+        };
+
+        const width = 960;
+        const height = 600;
+        const svg = d3.select("svg");
+        const g = svg.append("g").attr("transform", "translate(90,0)");
+
+        const tree = d3.tree().size([height, width - 160]);
+        let root = d3.hierarchy(data);
+
+        tree(root);
+
+        const link = g.selectAll(".link")
+            .data(root.descendants().slice(1))
+            .enter().append("path")
+            .attr("class", "link")
+            .attr("d", d => `
+                M${d.y},${d.x}
+                C${(d.y + d.parent.y) / 2},${d.x}
+                ${(d.y + d.parent.y) / 2},${d.parent.x}
+                ${d.parent.y},${d.parent.x}
+            `);
+
+        const node = g.selectAll(".node")
+            .data(root.descendants())
+            .enter().append("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${d.y},${d.x})`);
+
+        node.append("circle")
+            .attr("r", 10);
+
+        node.append("text")
+            .attr("dy", 3)
+            .attr("x", d => d.children ? -12 : 12)
+            .style("text-anchor", d => d.children ? "end" : "start")
+            .text(d => d.data.name);
+
+        function insertNode(parentName, nodeName) {
+            let parent = root.descendants().find(d => d.data.name === parentName);
+            if (!parent.children) {
+                parent.children = [];
+            }
+            parent.children.push({ name: nodeName });
+            root = d3.hierarchy(data);
+            tree(root);
+
+            const nodes = g.selectAll(".node")
+                .data(root.descendants(), d => d.data.name);
+
+            const nodesEnter = nodes.enter().append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${parent.y},${parent.x})`);
+
+            nodesEnter.append("circle")
+                .attr("r", 10)
+                .style("opacity", 0)
+                .transition()
+                .duration(1000)
+                .attr("r", 10)
+                .style("opacity", 1);
+
+            nodesEnter.append("text")
+                .attr("dy", 3)
+                .attr("x", d => d.children ? -12 : 12)
+                .style("text-anchor", d => d.children ? "end" : "start")
+                .text(d => d.data.name)
+                .style("opacity", 0)
+                .transition()
+                .duration(1000)
+                .style("opacity", 1);
+
+            nodes.transition()
+                .duration(1000)
+                .attr("transform", d => `translate(${d.y},${d.x})`);
+
+            const links = g.selectAll(".link")
+                .data(root.descendants().slice(1), d => d.data.name);
+
+            links.enter().append("path")
+                .attr("class", "link")
+                .attr("d", d => `
+                    M${parent.y},${parent.x}
+                    C${(parent.y + parent.y) / 2},${parent.x}
+                    ${(parent.y + parent.y) / 2},${parent.x}
+                    ${parent.y},${parent.x}
+                `)
+                .transition()
+                .duration(1000)
+                .attr("d", d => `
+                    M${d.y},${d.x}
+                    C${(d.y + d.parent.y) / 2},${d.x}
+                    ${(d.y + d.parent.y) / 2},${d.parent.x}
+                    ${d.parent.y},${d.parent.x}
+                `);
+
+            links.transition()
+                .duration(1000)
+                .attr("d", d => `
+                    M${d.y},${d.x}
+                    C${(d.y + d.parent.y) / 2},${d.x}
+                    ${(d.y + d.parent.y) / 2},${d.parent.x}
+                    ${d.parent.y},${d.parent.x}
+                `);
+        }
+
+        // Example of inserting a node
+        setTimeout(() => insertNode("Child 1", "New Child"), 2000);
+    </script>
+</body>
+</html>
